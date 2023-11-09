@@ -1,7 +1,13 @@
 import pika
 from decouple import config
+from enum import Enum
 
-class RabbitMQHandler:
+class QueueName(Enum):
+    cartoes = "Cartões"
+    emprestimos = "Empréstimos"
+    outros = "Outros Assuntos"
+
+class Queue:
     def __init__(self):
         self.RABBITMQ_HOST = config('RABBITMQ_HOST')
         self.RABBITMQ_PORT = config('RABBITMQ_PORT')
@@ -13,18 +19,16 @@ class RabbitMQHandler:
         return pika.BlockingConnection(pika.ConnectionParameters(
             host=self.RABBITMQ_HOST, port=self.RABBITMQ_PORT, credentials=pika.PlainCredentials(self.RABBITMQ_USER, self.RABBITMQ_PASSWORD)))
 
-    def send_to_queue(self, message, queue_name):
+    def send_to_queue(self, message:str, queue_name:QueueName):
         try:
-            connection = self.connection
-            channel = connection.channel()
+            channel = self.connection.channel()
             channel.queue_declare(queue=queue_name)
             channel.basic_publish(exchange='', routing_key=queue_name, body=message)
-            connection.close()
             return {"message": f"Item '{message}' adicionado à fila '{queue_name}' com sucesso!"}
         except Exception as e:
             return {"error": f"Erro ao adicionar item à fila '{queue_name}': {str(e)}"}
 
-    def consume_next_message(self, queue_name):
+    def consume_next_message(self, queue_name:QueueName):
         try:
             channel = self.connection.channel()
             channel.queue_declare(queue=queue_name)
@@ -39,11 +43,11 @@ class RabbitMQHandler:
         except Exception as error:
             return {"error": f"Erro ao consumir a próxima mensagem da fila '{queue_name}': {error}"}
 
-    def get_queue_size(self, queue_name):
+    def get_queue_size(self, queue_name:QueueName):
         try:
             channel = self.connection.channel()
             queue_info = channel.queue_declare(queue=queue_name, passive=True)
             message_count = queue_info.method.message_count
-            return {"message": f"Tamanho da fila '{queue_name}': {message_count}"}
+            return message_count
         except Exception as error:
             return {"error": f"Erro ao verificar o tamanho da fila '{queue_name}': {error}"}
