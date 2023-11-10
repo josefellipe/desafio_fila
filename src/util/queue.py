@@ -3,8 +3,8 @@ from decouple import config
 from enum import Enum
 
 class QueueName(Enum):
-    cartoes = "Cartões"
-    emprestimos = "Empréstimos"
+    cartoes = "Problemas com cartão"
+    emprestimos = "Contratação de empréstimo"
     outros = "Outros Assuntos"
 
 class Queue:

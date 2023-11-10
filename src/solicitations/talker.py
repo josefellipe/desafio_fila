@@ -16,13 +16,16 @@ class Solicitations:
         self.session.add(solicitation)
         self.session.commit()
         self.session.refresh(solicitation)
-        self.db.close_session()
         return SolicitationModel(**solicitation.__dict__)
 
 
     def read_solicitations(self, skip: int = 0, limit: int = 5) -> List[SolicitationModel]:
         solicitations = self.session.query(Solicitation).offset(skip).limit(limit).all()
-        self.db.close_session()
+        return [SolicitationModel(**solicitation.__dict__) for solicitation in solicitations]
+    
+
+    def read_solicitations_by_attendant_doing(self, attendant_id:int) -> List[SolicitationModel]:
+        solicitations = self.session.query(Solicitation).filter_by(is_doing=True, attendant_id=attendant_id).all()
         return [SolicitationModel(**solicitation.__dict__) for solicitation in solicitations]
 
 
@@ -53,7 +56,6 @@ class Solicitations:
 
         self.session.commit()
         self.session.refresh(solicitation)
-        self.db.close_session()
         return SolicitationModel(**solicitation.__dict__)
 
 
@@ -65,3 +67,6 @@ class Solicitations:
         self.session.delete(solicitation)
         self.session.commit()
         return "Solicitation deleted successfully"
+    
+    def close_session(self):
+        self.db.close_session()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from ..database.tables import Attendant, Solicitation
-from .models import AttendantModel, AttendantCreateUpdateModel, AttendantPatchModel
+from .models import AttendantModel, AttendantCreateUpdateModel, AttendantPatchModel, AttendantRoleEnum
 from ..solicitations.models import SolicitationModel, SolicitationCreateUpdateModel, SolicitationPatchModel
 from ..database.connection import DatabaseManager
 from ..util.autorizations import verify_key_and_user
@@ -12,6 +12,9 @@ attendant_route = APIRouter()
 
 @attendant_route.post("/attendants/", response_model=AttendantModel)
 def create_attendant(attendant: AttendantCreateUpdateModel, key: tuple = Depends(verify_key_and_user)):
+    roles = (role.value for role in AttendantRoleEnum)
+    if attendant.role not in roles:
+        raise HTTPException(status_code=404, detail="Role not found")
     db = DatabaseManager()
     session = db.open_session()
     attendant = Attendant(**attendant.__dict__)
@@ -22,10 +25,10 @@ def create_attendant(attendant: AttendantCreateUpdateModel, key: tuple = Depends
     return AttendantModel(**attendant.__dict__)
 
 @attendant_route.get("/attendants/", response_model=List[AttendantModel])
-def read_attendants(skip: int = 0, limit: int = 5, key: str = Depends(verify_key_and_user)):
+def read_attendants(key: str = Depends(verify_key_and_user)):
     db = DatabaseManager()
     session = db.open_session()
-    attendants = session.query(Attendant).offset(skip).limit(limit).all()
+    attendants = session.query(Attendant).all()
     db.close_session()
     return [AttendantModel(**attendant.__dict__) for attendant in attendants]
 

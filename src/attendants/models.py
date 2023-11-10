@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, Union
 from enum import Enum
 
-class AttendantRoleEnum(str, Enum):
+class AttendantRoleEnum(Enum):
     cartoes = "Cartões"
     emprestimos = "Empréstimos"
     outros = "Outros Assuntos"
