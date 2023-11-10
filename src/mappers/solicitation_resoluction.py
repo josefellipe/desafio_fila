@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Response, status
-from ..solicitations.models import SolicitationModel, SolicitationCreateUpdateModel, SolicitationPatchModel
+from ..solicitations.models import SolicitationModel, SolicitationCreateUpdateModel, SolicitationPatchModel, SolicitationTypeEnum
 from ..util.autorizations import verify_key_and_user
 from ..attendants.models import AttendantRoleEnum
 
@@ -21,19 +21,27 @@ def attendante_get_solicitation(attendant_id: int, key: tuple = Depends(verify_k
     attendant = read_attendant(attendant_id=attendant_id, key=key)
     solicitations_db = Solicitations()
     solicitations_attendant = len(solicitations_db.read_solicitations_by_attendant_doing(attendant_id=attendant.id))
+
+    if attendant.role == AttendantRoleEnum.cartoes.value:
+        queue_name = SolicitationTypeEnum.cartoes.value
+    elif attendant.role == AttendantRoleEnum.emprestimos.value:
+        queue_name = SolicitationTypeEnum.emprestimos.value
+    else:
+        queue_name = SolicitationTypeEnum.outros.value
+
     queue = Queue()
     new_solicitation = None
     while solicitations_attendant < 3:
-        queue_size = queue.get_queue_size(queue_name=f'{attendant.role}')
+        queue_size = queue.get_queue_size(queue_name=queue_name)
         print(queue_size)
         if int(queue_size) == 0:
             break
         
-        solicitation = queue.consume_next_message(queue_name=attendant.role)
+        solicitation = queue.consume_next_message(queue_name=queue_name)
         new_solicitation = SolicitationCreateUpdateModel(**json.loads(solicitation['message']), attendant_id=attendant_id)
-        if new_solicitation.solicitation_type == 'Problemas com cartão':
+        if new_solicitation.solicitation_type == SolicitationTypeEnum.cartoes.value:
             new_solicitation.solicitation_type = AttendantRoleEnum.cartoes.value
-        elif new_solicitation.solicitation_type == 'Contratação de empréstimo':
+        elif new_solicitation.solicitation_type == SolicitationTypeEnum.emprestimos.value:
             new_solicitation.solicitation_type = AttendantRoleEnum.emprestimos.value
         else:
             new_solicitation.solicitation_type = AttendantRoleEnum.outros.value
@@ -44,7 +52,7 @@ def attendante_get_solicitation(attendant_id: int, key: tuple = Depends(verify_k
     if new_solicitation:
         solicitations_db.close_session()
     
-    return Response(content=f"Attendant is full", status_code=status.HTTP_200_OK)
+    return Response(content=f"Attendant is working", status_code=status.HTTP_200_OK)
 
 
 @resoluction_route.get("/resoluction/attendant_doing/{attendant_id}")
